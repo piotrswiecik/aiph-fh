@@ -1,62 +1,57 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# FashionHero Seller Pro Analytics - Agent Instructions
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+You are working on a prototype branch of the existing FashionHero Next.js app.
 
-# Website Reverse-Engineer Template
+Before coding, read:
 
-## What This Is
-A reusable template for reverse-engineering any website and rebuilding it as a faithful clone using Claude Code. The Next.js + shadcn/ui + Tailwind v4 base is pre-scaffolded — just fill in TARGET.md and run `/clone-website`.
+1. `docs/seller-pro-analytics-project-config.md`
+2. `docs/seller-pro-analytics-feature-spec.md`
+3. `DESIGN.md`
 
-## Tech Stack
-- **Framework:** Next.js 16 (App Router, React 19, TypeScript strict)
-- **UI:** shadcn/ui (Radix primitives, Tailwind CSS v4, `cn()` utility)
-- **Icons:** Lucide React (default — will be replaced/supplemented by extracted SVGs)
-- **Styling:** Tailwind CSS v4 with oklch design tokens
-- **Deployment:** Vercel
+## Goal
 
-## Commands
-- `npm run dev` — Start dev server
-- `npm run build` — Production build
-- `npm run lint` — ESLint check
+Build an internal POC of Seller Pro Analytics: an authenticated seller dashboard showing SKU-level signals for sales, returns, support tickets, buyer ratings, and exposure quality.
 
-## Code Style
-- TypeScript strict mode, no `any`
-- Named exports, PascalCase components, camelCase utils
-- Tailwind utility classes, no inline styles
-- 2-space indentation
-- Responsive: mobile-first
+This is an interactive mock for usability testing, not production software.
 
-## Design Principles
-- **Pixel-perfect emulation** — match the target's spacing, colors, typography exactly
-- **No personal aesthetic changes during emulation phase** — match 1:1 first, customize later
-- **Real content** — use actual text and assets from the target site, not placeholders
-- **Beauty-first** — every pixel matters
+## Scope
 
-## Project Structure
-```
-src/
-  app/              # Next.js routes
-  components/       # React components
-    ui/             # shadcn/ui primitives
-    icons.tsx       # Extracted SVG icons as React components
-  lib/
-    utils.ts        # cn() utility (shadcn)
-  types/            # TypeScript interfaces
-  hooks/            # Custom React hooks
-public/
-  images/           # Downloaded images from target site
-  videos/           # Downloaded videos from target site
-  seo/              # Favicons, OG images, webmanifest
-docs/
-  research/         # Inspection output (design tokens, components, layout)
-  design-references/ # Screenshots and visual references
-scripts/            # Asset download scripts
-```
+Build only the seller analytics flow:
 
-## MOST IMPORTANT NOTES
-- When launching Claude Code agent teams, ALWAYS have each teammate work in their own worktree branch and merge everyone's work at the end, resolving any merge conflicts smartly since you are basically serving the orchestrator role and have full context to our goals, work given, work achieved, and desired outcomes.
+- seller login/auth-gated dashboard
+- seller-owned SKU list
+- risk-oriented sorting
+- SKU detail page
+- recommended actions section
+- loading skeletons
 
-@docs/research/INSPECTION_GUIDE.md
-@TARGET.md
+Do not build SKU creation, SKU editing, seller registration, admin dashboards, checkout changes, buyer-facing changes, or public seller-data pages.
+
+## Engineering Rules
+
+- Use Next.js 16 App Router and TypeScript strict mode.
+- Prefer Server Components by default.
+- Use existing project patterns, components, styling, and routes where possible.
+- Keep code simple; this is a POC.
+- Use BetterAuth for protected seller pages.
+- Use Drizzle ORM only if existing project patterns require data access.
+- Add Vitest tests only where behavior is risky or easy to regress.
+
+## Boundaries
+
+Ask before:
+
+- adding dependencies
+- changing database schema or migrations
+- running `pnpm dev`, `pnpm build`, or `pnpm test`
+- modifying global styles, the design system, checkout, cart, public shop pages, or product pages
+
+Never expose seller-specific sales, returns, support, or assortment data on public pages.
+
+## Verification
+
+The prototype should support this test flow:
+
+seller dashboard -> problematic SKU/alert -> SKU detail -> recommended actions
+
+A tester should understand within a few minutes which SKU needs attention, why, and what action they could take.
