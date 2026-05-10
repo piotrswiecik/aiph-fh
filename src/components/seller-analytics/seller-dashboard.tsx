@@ -7,9 +7,11 @@ import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   ArrowUpDown,
+  ArrowRight,
   Eye,
   LogOut,
   PackageCheck,
+  Sparkles,
   Star,
   Ticket,
   TrendingDown,
@@ -197,6 +199,36 @@ function RowMetric({
   );
 }
 
+function ProPlusBanner() {
+  return (
+    <section className="mb-8 border-y border-black/10 py-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex gap-3">
+          <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-charcoal text-white">
+            <Sparkles className="size-4" />
+          </span>
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.8px] text-warm-gray mb-1">
+              Seller Pro+
+            </p>
+            <h2 className="text-xl font-light text-charcoal">Want to know even more before issues grow?</h2>
+            <p className="mt-1 max-w-2xl text-[13px] text-warm-gray">
+              Pro+ will add earlier warnings, margin impact, and buyer-theme clustering for SKUs that need deeper review.
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/seller/pro-plus"
+          className="btn-cta gap-2 self-start text-[11px] md:self-auto"
+        >
+          JOIN WAITLIST
+          <ArrowRight className="size-3.5" />
+        </Link>
+      </div>
+    </section>
+  );
+}
+
 export function SellerDashboard() {
   const router = useRouter();
   const { session, loaded } = useSellerSession();
@@ -300,6 +332,8 @@ export function SellerDashboard() {
           </span>
         </Link>
       )}
+
+      <ProPlusBanner />
 
       <section>
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
