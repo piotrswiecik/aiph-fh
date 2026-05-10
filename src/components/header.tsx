@@ -9,6 +9,7 @@ import { MegaMenuNav, MobileMegaMenuContent } from "./mega-menu";
 import { useAuth } from "./auth-provider";
 
 const secondaryLinks = [
+  { label: "Seller Pro", href: "/seller" },
   { label: "About", href: "/about" },
 ];
 
@@ -51,7 +52,10 @@ export function Header({ onCartOpen, cartCount = 0, wishlistCount = 0 }: HeaderP
             <Link
               key={link.href}
               href={link.href}
-              className="hidden lg:block text-[12px] text-charcoal hover:opacity-60 transition-opacity"
+              className={cn(
+                "hidden lg:block text-[12px] hover:opacity-60 transition-opacity",
+                link.href === "/seller" ? "text-red-600" : "text-charcoal"
+              )}
             >
               {link.label}
             </Link>

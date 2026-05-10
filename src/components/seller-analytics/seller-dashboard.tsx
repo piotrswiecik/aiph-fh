@@ -1,0 +1,283 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { useMemo, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  AlertTriangle,
+  ArrowUpDown,
+  Eye,
+  LogOut,
+  PackageCheck,
+  Star,
+  Ticket,
+  TrendingDown,
+} from "lucide-react";
+import { getMockSellerAnalytics, sortSellerSkus } from "@/data/seller-analytics";
+import {
+  clearSellerSession,
+  useSellerSession,
+} from "@/components/seller-analytics/seller-auth";
+import { SellerDashboardSkeleton } from "@/components/seller-analytics/seller-loading";
+import type {
+  SellerAnalyticsSort,
+  SellerAnalyticsStatus,
+  SellerSkuAnalytics,
+} from "@/types/seller-analytics";
+
+const sortOptions: { value: SellerAnalyticsSort; label: string }[] = [
+  { value: "risk", label: "Risk" },
+  { value: "returns", label: "Returns" },
+  { value: "tickets", label: "Tickets" },
+  { value: "exposure", label: "Exposure" },
+];
+
+function statusClass(status: SellerAnalyticsStatus): string {
+  if (status === "Needs attention") return "bg-red-50 text-red-700 border-red-200";
+  if (status === "Watch") return "bg-amber-50 text-amber-800 border-amber-200";
+  if (status === "Super") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  return "bg-white text-charcoal/70 border-black/10";
+}
+
+function rate(part: number, total: number): string {
+  return `${Math.round((part / Math.max(total, 1)) * 100)}%`;
+}
+
+function average(values: number[]): number {
+  if (values.length === 0) return 0;
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
+
+function Metric({
+  label,
+  value,
+  subLabel,
+}: {
+  label: string;
+  value: string;
+  subLabel?: string;
+}) {
+  return (
+    <div className="py-5 pr-4 md:border-r border-black/10 last:border-r-0">
+      <p className="text-[11px] font-medium uppercase tracking-[0.8px] text-warm-gray mb-1">
+        {label}
+      </p>
+      <p className="text-2xl font-light text-charcoal">{value}</p>
+      {subLabel && <p className="text-[12px] text-warm-gray mt-1">{subLabel}</p>}
+    </div>
+  );
+}
+
+function SkuRow({ sku }: { sku: SellerSkuAnalytics }) {
+  return (
+    <Link
+      href={`/seller/skus/${sku.sku}`}
+      className="group grid gap-4 py-4 border-b border-black/10 transition-colors hover:bg-white/55 md:grid-cols-[64px_minmax(220px,1.2fr)_repeat(5,minmax(72px,0.55fr))_96px] md:items-center"
+    >
+      <Image
+        src={sku.image}
+        alt={sku.name}
+        width={96}
+        height={96}
+        className="size-16 rounded object-cover bg-cream-light"
+      />
+
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2 mb-1">
+          <span className={`border px-2 py-0.5 rounded-full text-[10px] font-medium ${statusClass(sku.status)}`}>
+            {sku.status}
+          </span>
+          <span className="text-[11px] uppercase tracking-[0.7px] text-warm-gray">
+            {sku.sku}
+          </span>
+        </div>
+        <p className="text-[14px] font-medium text-charcoal group-hover:underline underline-offset-4">
+          {sku.name}
+        </p>
+        <p className="text-[12px] text-warm-gray capitalize">
+          {sku.category} / {sku.colorName}
+        </p>
+      </div>
+
+      <RowMetric label="Sales" value={String(sku.unitsSold)} />
+      <RowMetric label="Returns" value={rate(sku.returnCount, sku.unitsSold)} />
+      <RowMetric label="Tickets" value={String(sku.supportTickets)} />
+      <RowMetric label="Rating" value={sku.rating.toFixed(1)} />
+      <RowMetric label="Exposure" value={`${sku.exposureScore}%`} />
+
+      <div>
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <span className="text-[11px] text-warm-gray">Risk</span>
+          <span className="text-[12px] font-medium text-charcoal">{sku.riskScore}</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-black/10 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-charcoal transition-all"
+            style={{ width: `${sku.riskScore}%` }}
+          />
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function RowMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between md:block">
+      <span className="text-[11px] text-warm-gray md:hidden">{label}</span>
+      <span className="text-[13px] font-medium text-charcoal">{value}</span>
+    </div>
+  );
+}
+
+export function SellerDashboard() {
+  const router = useRouter();
+  const { session, loaded } = useSellerSession();
+  const [sort, setSort] = useState<SellerAnalyticsSort>("risk");
+
+  useEffect(() => {
+    if (loaded && !session) {
+      router.replace("/seller/login");
+    }
+  }, [loaded, router, session]);
+
+  const analytics = useMemo(() => {
+    if (!session) return null;
+    return getMockSellerAnalytics(session.email);
+  }, [session]);
+
+  const sortedSkus = useMemo(() => {
+    if (!analytics) return [];
+    return sortSellerSkus(analytics.skus, sort);
+  }, [analytics, sort]);
+
+  if (!loaded || !session || !analytics) {
+    return <SellerDashboardSkeleton />;
+  }
+
+  const totalSales = analytics.skus.reduce((sum, sku) => sum + sku.unitsSold, 0);
+  const totalReturns = analytics.skus.reduce((sum, sku) => sum + sku.returnCount, 0);
+  const totalTickets = analytics.skus.reduce((sum, sku) => sum + sku.supportTickets, 0);
+  const highestRisk = analytics.skus[0];
+  const averageExposure = average(analytics.skus.map((sku) => sku.exposureScore));
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 lg:px-8 py-8 md:py-10">
+      <nav className="text-[11px] text-warm-gray mb-8 tracking-wide">
+        <Link href="/" className="hover:text-charcoal transition-colors">
+          Home
+        </Link>
+        <span className="mx-1.5">/</span>
+        <span className="text-charcoal">Seller Pro Analytics</span>
+      </nav>
+
+      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-8">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.8px] text-warm-gray mb-2">
+            {analytics.session.sellerName} / {analytics.session.email}
+          </p>
+          <h1 className="text-3xl md:text-4xl font-light text-charcoal">
+            Seller Pro Analytics
+          </h1>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            clearSellerSession();
+            router.push("/seller/login");
+          }}
+          className="btn-cta-outline gap-2 text-[11px] self-start md:self-auto"
+        >
+          <LogOut className="size-3.5" />
+          SIGN OUT
+        </button>
+      </header>
+
+      <section className="grid grid-cols-2 gap-x-4 md:grid-cols-5 border-y border-black/10 mb-8">
+        <Metric label="SKU count" value={String(analytics.skus.length)} subLabel="seller owned" />
+        <Metric label="Sales" value={String(totalSales)} subLabel="last 6 months" />
+        <Metric label="Returns" value={rate(totalReturns, totalSales)} subLabel={`${totalReturns} units`} />
+        <Metric label="Tickets" value={String(totalTickets)} subLabel="buyer support" />
+        <Metric label="Exposure" value={`${averageExposure}%`} subLabel="portfolio avg" />
+      </section>
+
+      {highestRisk && (
+        <Link
+          href={`/seller/skus/${highestRisk.sku}`}
+          className="flex flex-col gap-4 border-b border-black/10 pb-6 mb-8 md:flex-row md:items-center md:justify-between"
+        >
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 rounded-full bg-red-50 p-2 text-red-700">
+              <AlertTriangle className="size-4" />
+            </span>
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-[0.8px] text-warm-gray mb-1">
+                Top risk
+              </p>
+              <h2 className="text-xl font-light text-charcoal">{highestRisk.name}</h2>
+              <p className="text-[13px] text-warm-gray mt-1">{highestRisk.reasons[0]}</p>
+            </div>
+          </div>
+          <span className="text-[12px] font-medium uppercase tracking-[0.8px] text-charcoal">
+            Review SKU
+          </span>
+        </Link>
+      )}
+
+      <section>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
+          <div>
+            <h2 className="text-2xl font-light text-charcoal">SKU signals</h2>
+            <p className="text-[12px] text-warm-gray mt-1">
+              Sorted by {sortOptions.find((option) => option.value === sort)?.label.toLowerCase()}.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {sortOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setSort(option.value)}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-[11px] font-medium uppercase tracking-[0.7px] transition-colors ${
+                  sort === option.value
+                    ? "bg-charcoal text-white border-charcoal"
+                    : "bg-transparent text-charcoal border-black/15 hover:border-charcoal"
+                }`}
+              >
+                <ArrowUpDown className="size-3" />
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="hidden md:grid md:grid-cols-[64px_minmax(220px,1.2fr)_repeat(5,minmax(72px,0.55fr))_96px] gap-4 border-y border-black/10 py-3">
+          <span />
+          <span className="text-[11px] font-medium uppercase tracking-[0.8px] text-warm-gray">SKU</span>
+          <HeaderMetric icon={<PackageCheck className="size-3" />} label="Sales" />
+          <HeaderMetric icon={<TrendingDown className="size-3" />} label="Returns" />
+          <HeaderMetric icon={<Ticket className="size-3" />} label="Tickets" />
+          <HeaderMetric icon={<Star className="size-3" />} label="Rating" />
+          <HeaderMetric icon={<Eye className="size-3" />} label="Exposure" />
+          <span className="text-[11px] font-medium uppercase tracking-[0.8px] text-warm-gray">Risk</span>
+        </div>
+
+        <div className="border-t border-black/10 md:border-t-0">
+          {sortedSkus.map((sku) => (
+            <SkuRow key={sku.sku} sku={sku} />
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function HeaderMetric({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.8px] text-warm-gray">
+      {icon}
+      {label}
+    </span>
+  );
+}
