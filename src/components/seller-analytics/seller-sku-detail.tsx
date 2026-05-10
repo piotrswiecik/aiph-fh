@@ -25,6 +25,11 @@ import type {
   SellerSkuAnalytics,
   SkuTrendPoint,
 } from "@/types/seller-analytics";
+import {
+  TermTooltip,
+  termFromLabel,
+  tooltipDescriptions,
+} from "@/components/seller-analytics/metric-tooltip";
 
 function statusClass(status: SellerAnalyticsStatus): string {
   if (status === "Needs attention") return "bg-red-50 text-red-700 border-red-200";
@@ -46,13 +51,23 @@ function DetailMetric({
   value: string;
   icon: React.ReactNode;
 }) {
+  const term = termFromLabel(label);
+
   return (
-    <div className="py-5 pr-4 md:border-r border-black/10 last:border-r-0">
+    <div
+      className="group/detail-metric relative py-5 pr-4 md:border-r border-black/10 last:border-r-0"
+      tabIndex={term ? 0 : undefined}
+    >
       <div className="flex items-center gap-2 text-warm-gray mb-2">
         {icon}
         <p className="text-[11px] font-medium uppercase tracking-[0.8px]">{label}</p>
       </div>
       <p className="text-2xl font-light text-charcoal">{value}</p>
+      {term && (
+        <span className="pointer-events-none absolute left-0 top-full z-30 mt-2 w-48 rounded bg-charcoal px-3 py-2 text-left text-[11px] font-normal normal-case leading-snug tracking-normal text-white opacity-0 shadow-lg transition-opacity group-hover/detail-metric:opacity-100 group-focus/detail-metric:opacity-100">
+          {tooltipDescriptions[term]}
+        </span>
+      )}
     </div>
   );
 }
@@ -86,7 +101,15 @@ function TrendRows({ trend }: { trend: SkuTrendPoint[] }) {
   );
 }
 
-function ExposureRow({ label, value }: { label: string; value: number }) {
+function ExposureRow({
+  label,
+  value,
+  description,
+}: {
+  label: string;
+  value: number;
+  description: string;
+}) {
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
@@ -96,6 +119,7 @@ function ExposureRow({ label, value }: { label: string; value: number }) {
       <div className="h-1.5 rounded-full bg-black/10 overflow-hidden">
         <div className="h-full rounded-full bg-charcoal" style={{ width: `${value}%` }} />
       </div>
+      <p className="mt-1.5 text-[11px] text-warm-gray">{description}</p>
     </div>
   );
 }
@@ -225,22 +249,44 @@ export function SellerSkuDetail({ skuId }: { skuId: string }) {
           <div className="flex items-end justify-between gap-4 border-b border-black/10 pb-3 mb-5">
             <div>
               <h2 className="text-2xl font-light text-charcoal">Trend</h2>
-              <p className="text-[12px] text-warm-gray mt-1">Sales, returns, and tickets by month.</p>
+              <p className="text-[12px] text-warm-gray mt-1">
+                <TermTooltip term="sales">Sales</TermTooltip>,{" "}
+                <TermTooltip term="returns">returns</TermTooltip>, and{" "}
+                <TermTooltip term="tickets">tickets</TermTooltip> by month.
+              </p>
             </div>
-            <span className="text-[12px] font-medium text-charcoal">Risk {sku.riskScore}</span>
+            <span className="text-[12px] font-medium text-charcoal">
+              <TermTooltip term="risk">Risk</TermTooltip> {sku.riskScore}
+            </span>
           </div>
           <TrendRows trend={sku.trend} />
         </section>
 
         <section>
           <h2 className="text-2xl font-light text-charcoal border-b border-black/10 pb-3 mb-5">
-            Exposure quality
+            <TermTooltip term="exposure">Exposure</TermTooltip> quality
           </h2>
           <div className="space-y-4">
-            <ExposureRow label="Copy" value={sku.exposureBreakdown.copy} />
-            <ExposureRow label="Photos" value={sku.exposureBreakdown.photos} />
-            <ExposureRow label="Variants" value={sku.exposureBreakdown.variants} />
-            <ExposureRow label="Size coverage" value={sku.exposureBreakdown.sizeCoverage} />
+            <ExposureRow
+              label="Copy"
+              value={sku.exposureBreakdown.copy}
+              description="How clearly the listing explains fit, material, care, and buyer expectations."
+            />
+            <ExposureRow
+              label="Photos"
+              value={sku.exposureBreakdown.photos}
+              description="How well the image set shows the product, details, and primary use context."
+            />
+            <ExposureRow
+              label="Variants"
+              value={sku.exposureBreakdown.variants}
+              description="How complete the available color and style options are for this SKU."
+            />
+            <ExposureRow
+              label="Size coverage"
+              value={sku.exposureBreakdown.sizeCoverage}
+              description="How well available sizes cover expected buyer demand."
+            />
           </div>
         </section>
       </div>

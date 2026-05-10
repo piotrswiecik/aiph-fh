@@ -25,6 +25,12 @@ import type {
   SellerAnalyticsStatus,
   SellerSkuAnalytics,
 } from "@/types/seller-analytics";
+import {
+  TermTooltip,
+  TooltipLabel,
+  termFromLabel,
+  tooltipDescriptions,
+} from "@/components/seller-analytics/metric-tooltip";
 
 const sortOptions: { value: SellerAnalyticsSort; label: string }[] = [
   { value: "risk", label: "Risk" },
@@ -58,13 +64,23 @@ function Metric({
   value: string;
   subLabel?: string;
 }) {
+  const term = termFromLabel(label);
+
   return (
-    <div className="py-5 pr-4 md:border-r border-black/10 last:border-r-0">
+    <div
+      className="group/metric relative py-5 pr-4 md:border-r border-black/10 last:border-r-0"
+      tabIndex={term ? 0 : undefined}
+    >
       <p className="text-[11px] font-medium uppercase tracking-[0.8px] text-warm-gray mb-1">
         {label}
       </p>
       <p className="text-2xl font-light text-charcoal">{value}</p>
       {subLabel && <p className="text-[12px] text-warm-gray mt-1">{subLabel}</p>}
+      {term && (
+        <span className="pointer-events-none absolute left-0 top-full z-30 mt-2 w-48 rounded bg-charcoal px-3 py-2 text-left text-[11px] font-normal normal-case leading-snug tracking-normal text-white opacity-0 shadow-lg transition-opacity group-hover/metric:opacity-100 group-focus/metric:opacity-100">
+          {tooltipDescriptions[term]}
+        </span>
+      )}
     </div>
   );
 }
@@ -108,7 +124,9 @@ function SkuRow({ sku }: { sku: SellerSkuAnalytics }) {
 
       <div>
         <div className="flex items-center justify-between gap-2 mb-1">
-          <span className="text-[11px] text-warm-gray">Risk</span>
+          <span className="text-[11px] text-warm-gray">
+            <TermTooltip term="risk">Risk</TermTooltip>
+          </span>
           <span className="text-[12px] font-medium text-charcoal">{sku.riskScore}</span>
         </div>
         <div className="h-1.5 rounded-full bg-black/10 overflow-hidden">
@@ -125,7 +143,9 @@ function SkuRow({ sku }: { sku: SellerSkuAnalytics }) {
 function RowMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between md:block">
-      <span className="text-[11px] text-warm-gray md:hidden">{label}</span>
+      <span className="text-[11px] text-warm-gray md:hidden">
+        <TooltipLabel label={label} />
+      </span>
       <span className="text-[13px] font-medium text-charcoal">{value}</span>
     </div>
   );
@@ -213,7 +233,7 @@ export function SellerDashboard() {
             </span>
             <div>
               <p className="text-[11px] font-medium uppercase tracking-[0.8px] text-warm-gray mb-1">
-                Top risk
+                Top <TermTooltip term="risk">risk</TermTooltip>
               </p>
               <h2 className="text-xl font-light text-charcoal">{highestRisk.name}</h2>
               <p className="text-[13px] text-warm-gray mt-1">{highestRisk.reasons[0]}</p>
@@ -230,7 +250,11 @@ export function SellerDashboard() {
           <div>
             <h2 className="text-2xl font-light text-charcoal">SKU signals</h2>
             <p className="text-[12px] text-warm-gray mt-1">
-              Sorted by {sortOptions.find((option) => option.value === sort)?.label.toLowerCase()}.
+              Sorted by{" "}
+              <TermTooltip term={sort}>
+                {sortOptions.find((option) => option.value === sort)?.label.toLowerCase()}
+              </TermTooltip>
+              .
             </p>
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -246,7 +270,7 @@ export function SellerDashboard() {
                 }`}
               >
                 <ArrowUpDown className="size-3" />
-                {option.label}
+                <TermTooltip term={option.value}>{option.label}</TermTooltip>
               </button>
             ))}
           </div>
@@ -260,7 +284,7 @@ export function SellerDashboard() {
           <HeaderMetric icon={<Ticket className="size-3" />} label="Tickets" />
           <HeaderMetric icon={<Star className="size-3" />} label="Rating" />
           <HeaderMetric icon={<Eye className="size-3" />} label="Exposure" />
-          <span className="text-[11px] font-medium uppercase tracking-[0.8px] text-warm-gray">Risk</span>
+          <HeaderMetric label="Risk" />
         </div>
 
         <div className="border-t border-black/10 md:border-t-0">
@@ -273,11 +297,21 @@ export function SellerDashboard() {
   );
 }
 
-function HeaderMetric({ icon, label }: { icon: React.ReactNode; label: string }) {
+function HeaderMetric({ icon, label }: { icon?: React.ReactNode; label: string }) {
+  const term = termFromLabel(label);
+
   return (
-    <span className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.8px] text-warm-gray">
+    <span
+      className="group/header-tooltip relative flex h-full w-full items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.8px] text-warm-gray"
+      tabIndex={term ? 0 : undefined}
+    >
       {icon}
       {label}
+      {term && (
+        <span className="pointer-events-none absolute left-0 top-full z-30 mt-2 w-48 rounded bg-charcoal px-3 py-2 text-left text-[11px] font-normal normal-case leading-snug tracking-normal text-white opacity-0 shadow-lg transition-opacity group-hover/header-tooltip:opacity-100 group-focus/header-tooltip:opacity-100">
+          {tooltipDescriptions[term]}
+        </span>
+      )}
     </span>
   );
 }
