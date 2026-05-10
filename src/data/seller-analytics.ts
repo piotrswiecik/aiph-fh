@@ -56,13 +56,61 @@ function formatSku(productId: string, index: number): string {
   return `FH-${productId.padStart(3, "0")}-${String(index + 1).padStart(2, "0")}`;
 }
 
+function buildReturnRate(random: () => number): number {
+  const roll = random();
+  let rate: number;
+
+  if (roll < 0.56) {
+    rate = 0.05 + Math.pow(roll / 0.56, 1.08) * 0.095;
+  } else if (roll < 0.84) {
+    rate = 0.145 + Math.pow((roll - 0.56) / 0.28, 1.28) * 0.09;
+  } else if (roll < 0.97) {
+    rate = 0.235 + Math.pow((roll - 0.84) / 0.13, 1.15) * 0.145;
+  } else {
+    rate = 0.38 + Math.pow((roll - 0.97) / 0.03, 0.75) * 0.14;
+  }
+
+  return Number(clamp(rate, 0.05, 0.52).toFixed(3));
+}
+
+function buildSupportTickets(random: () => number): number {
+  const roll = random();
+
+  if (roll < 0.15) return 0;
+  if (roll < 0.52) return randomInt(random, 1, 2);
+  if (roll < 0.72) return randomInt(random, 3, 5);
+  if (roll < 0.86) return randomInt(random, 6, 10);
+  if (roll < 0.96) return randomInt(random, 11, 17);
+  if (roll < 0.995) return randomInt(random, 18, 21);
+  return 22;
+}
+
+function buildRating(random: () => number, returnRate: number, supportTickets: number): number {
+  const roll = random();
+  let rating: number;
+
+  if (roll < 0.16) {
+    rating = randomFloat(random, 3.2, 3.8, 1);
+  } else if (roll < 0.48) {
+    rating = randomFloat(random, 3.8, 4.25, 1);
+  } else if (roll < 0.82) {
+    rating = randomFloat(random, 4.25, 4.7, 1);
+  } else {
+    rating = randomFloat(random, 4.7, 5, 1);
+  }
+
+  const returnPenalty = returnRate >= 0.3 ? 0.25 : returnRate >= 0.2 ? 0.1 : 0;
+  const ticketPenalty = supportTickets >= 14 ? 0.2 : supportTickets >= 8 ? 0.1 : 0;
+
+  return clamp(Number((rating - returnPenalty - ticketPenalty).toFixed(1)), 3.1, 5);
+}
+
 function buildReasons(sku: SellerSkuAnalytics): string[] {
   const returnRate = sku.returnCount / sku.unitsSold;
-  const ticketRate = sku.supportTickets / sku.unitsSold;
   const reasons: string[] = [];
 
   if (returnRate >= 0.18) reasons.push("Return rate is materially above the seller portfolio.");
-  if (ticketRate >= 0.08) reasons.push("Support tickets are clustering around this SKU.");
+  if (sku.supportTickets >= 7) reasons.push("Support tickets are clustering around this SKU.");
   if (sku.rating < 4.1) reasons.push("Buyer rating is dragging confidence below target.");
   if (sku.exposureScore < 76) reasons.push("Exposure quality is limiting pre-sale clarity.");
 
@@ -80,7 +128,7 @@ function buildRecommendedActions(sku: SellerSkuAnalytics): string[] {
     actions.push("Audit size guidance and return reasons before the next merchandising review.");
   }
 
-  if (sku.supportTickets / sku.unitsSold >= 0.08) {
+  if (sku.supportTickets >= 7) {
     actions.push("Add a support macro for the top buyer question and update the product FAQ.");
   }
 
@@ -129,9 +177,9 @@ function buildSkuAnalytics(emailSeed: number, productId: string, index: number):
 
   const random = createRandom(hashString(`${emailSeed}:${product.id}:${product.slug}`));
   const baseUnits = product.badge === "bestseller" ? randomInt(random, 112, 190) : randomInt(random, 38, 156);
-  const pressure = random();
-  const returnRate = pressure > 0.72 ? randomFloat(random, 0.2, 0.34, 2) : randomFloat(random, 0.02, 0.18, 2);
-  const ticketRate = pressure > 0.55 ? randomFloat(random, 0.07, 0.17, 2) : randomFloat(random, 0.01, 0.08, 2);
+  const returnRate = buildReturnRate(random);
+  const returnCount = clamp(Math.round(baseUnits * returnRate), Math.ceil(baseUnits * 0.05), Math.round(baseUnits * 0.52));
+  const supportTickets = buildSupportTickets(random);
   const exposureBreakdown: ExposureBreakdown = {
     copy: randomInt(random, 62, 98),
     photos: randomInt(random, 58, 98),
@@ -145,13 +193,11 @@ function buildSkuAnalytics(emailSeed: number, productId: string, index: number):
       exposureBreakdown.sizeCoverage) /
       4
   );
-  const rating = clamp(randomFloat(random, product.rating || 3.7, 4.95, 1) - (pressure > 0.8 ? 0.5 : 0), 3.4, 5);
-  const returnCount = Math.round(baseUnits * returnRate);
-  const supportTickets = Math.round(baseUnits * ticketRate);
+  const rating = buildRating(random, returnRate, supportTickets);
   const riskScore = clamp(
     Math.round(
-      returnRate * 170 +
-        ticketRate * 210 +
+      returnRate * 130 +
+        (supportTickets / 22) * 30 +
         (100 - exposureScore) * 0.36 +
         Math.max(0, 4.6 - rating) * 12
     ),
@@ -224,7 +270,7 @@ export function sortSellerSkus(
     case "returns":
       return sorted.sort((a, b) => b.returnCount / b.unitsSold - a.returnCount / a.unitsSold);
     case "tickets":
-      return sorted.sort((a, b) => b.supportTickets / b.unitsSold - a.supportTickets / a.unitsSold);
+      return sorted.sort((a, b) => b.supportTickets - a.supportTickets);
     case "exposure":
       return sorted.sort((a, b) => a.exposureScore - b.exposureScore);
     case "risk":
