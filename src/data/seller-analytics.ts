@@ -267,6 +267,8 @@ export function sortSellerSkus(
   const sorted = [...skus];
 
   switch (sort) {
+    case "sales":
+      return sorted.sort((a, b) => b.unitsSold - a.unitsSold);
     case "returns":
       return sorted.sort((a, b) => b.returnCount / b.unitsSold - a.returnCount / a.unitsSold);
     case "tickets":

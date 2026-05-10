@@ -30,6 +30,14 @@ import {
   termFromLabel,
   tooltipDescriptions,
 } from "@/components/seller-analytics/metric-tooltip";
+import {
+  type MetricSeverity,
+  ratingSeverity,
+  returnsSeverity,
+  severityDotClass,
+  severityTextClass,
+  ticketsSeverity,
+} from "@/components/seller-analytics/metric-severity";
 
 function statusClass(status: SellerAnalyticsStatus): string {
   if (status === "Needs attention") return "bg-red-50 text-red-700 border-red-200";
@@ -46,10 +54,12 @@ function DetailMetric({
   label,
   value,
   icon,
+  severity = "neutral",
 }: {
   label: string;
   value: string;
   icon: React.ReactNode;
+  severity?: MetricSeverity;
 }) {
   const term = termFromLabel(label);
 
@@ -62,7 +72,10 @@ function DetailMetric({
         {icon}
         <p className="text-[11px] font-medium uppercase tracking-[0.8px]">{label}</p>
       </div>
-      <p className="text-2xl font-light text-charcoal">{value}</p>
+      <p className={`inline-flex items-center gap-2 text-2xl font-light ${severityTextClass(severity)}`}>
+        {severity !== "neutral" && <span className={`size-2 rounded-full ${severityDotClass(severity)}`} />}
+        {value}
+      </p>
       {term && (
         <span className="pointer-events-none absolute left-0 top-full z-30 mt-2 w-48 rounded bg-charcoal px-3 py-2 text-left text-[11px] font-normal normal-case leading-snug tracking-normal text-white opacity-0 shadow-lg transition-opacity group-hover/detail-metric:opacity-100 group-focus/detail-metric:opacity-100">
           {tooltipDescriptions[term]}
@@ -91,13 +104,38 @@ function TrendRows({ trend }: { trend: SkuTrendPoint[] }) {
               <span className="w-8 text-right text-[12px] text-charcoal">{point.sales}</span>
             </div>
             <div className="flex gap-3 text-[11px] text-warm-gray">
-              <span>{point.returns} returns</span>
-              <span>{point.tickets} tickets</span>
+              <TrendDataPoint
+                label="returns"
+                value={point.returns}
+                severity={returnsSeverity(point.returns / point.sales)}
+              />
+              <TrendDataPoint
+                label="tickets"
+                value={point.tickets}
+                severity={ticketsSeverity(point.tickets)}
+              />
             </div>
           </div>
         </div>
       ))}
     </div>
+  );
+}
+
+function TrendDataPoint({
+  label,
+  value,
+  severity,
+}: {
+  label: string;
+  value: number;
+  severity: MetricSeverity;
+}) {
+  return (
+    <span className={`inline-flex items-center gap-1 ${severityTextClass(severity)}`}>
+      {severity !== "neutral" && <span className={`size-1.5 rounded-full ${severityDotClass(severity)}`} />}
+      {value} {label}
+    </span>
   );
 }
 
@@ -226,16 +264,19 @@ export function SellerSkuDetail({ skuId }: { skuId: string }) {
           label="Returns"
           value={rate(sku.returnCount, sku.unitsSold)}
           icon={<TrendingDown className="size-3.5" />}
+          severity={returnsSeverity(sku.returnCount / sku.unitsSold)}
         />
         <DetailMetric
           label="Tickets"
           value={String(sku.supportTickets)}
           icon={<MessageSquare className="size-3.5" />}
+          severity={ticketsSeverity(sku.supportTickets)}
         />
         <DetailMetric
           label="Rating"
           value={sku.rating.toFixed(1)}
           icon={<Star className="size-3.5" />}
+          severity={ratingSeverity(sku.rating)}
         />
         <DetailMetric
           label="Exposure"

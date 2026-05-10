@@ -31,9 +31,22 @@ import {
   termFromLabel,
   tooltipDescriptions,
 } from "@/components/seller-analytics/metric-tooltip";
+import {
+  type MetricSeverity,
+  ratingSeverity,
+  riskBarClass,
+  riskDotClass,
+  riskSeverity,
+  riskTextClass,
+  returnsSeverity,
+  severityDotClass,
+  severityTextClass,
+  ticketsSeverity,
+} from "@/components/seller-analytics/metric-severity";
 
 const sortOptions: { value: SellerAnalyticsSort; label: string }[] = [
   { value: "risk", label: "Risk" },
+  { value: "sales", label: "Sales" },
   { value: "returns", label: "Returns" },
   { value: "tickets", label: "Tickets" },
   { value: "exposure", label: "Exposure" },
@@ -59,10 +72,12 @@ function Metric({
   label,
   value,
   subLabel,
+  severity = "neutral",
 }: {
   label: string;
   value: string;
   subLabel?: string;
+  severity?: MetricSeverity;
 }) {
   const term = termFromLabel(label);
 
@@ -74,7 +89,10 @@ function Metric({
       <p className="text-[11px] font-medium uppercase tracking-[0.8px] text-warm-gray mb-1">
         {label}
       </p>
-      <p className="text-2xl font-light text-charcoal">{value}</p>
+      <p className={`inline-flex items-center gap-2 text-2xl font-light ${severityTextClass(severity)}`}>
+        {severity !== "neutral" && <span className={`size-2 rounded-full ${severityDotClass(severity)}`} />}
+        {value}
+      </p>
       {subLabel && <p className="text-[12px] text-warm-gray mt-1">{subLabel}</p>}
       {term && (
         <span className="pointer-events-none absolute left-0 top-full z-30 mt-2 w-48 rounded bg-charcoal px-3 py-2 text-left text-[11px] font-normal normal-case leading-snug tracking-normal text-white opacity-0 shadow-lg transition-opacity group-hover/metric:opacity-100 group-focus/metric:opacity-100">
@@ -86,6 +104,8 @@ function Metric({
 }
 
 function SkuRow({ sku }: { sku: SellerSkuAnalytics }) {
+  const risk = riskSeverity(sku.riskScore);
+
   return (
     <Link
       href={`/seller/skus/${sku.sku}`}
@@ -117,9 +137,21 @@ function SkuRow({ sku }: { sku: SellerSkuAnalytics }) {
       </div>
 
       <RowMetric label="Sales" value={String(sku.unitsSold)} />
-      <RowMetric label="Returns" value={rate(sku.returnCount, sku.unitsSold)} />
-      <RowMetric label="Tickets" value={String(sku.supportTickets)} />
-      <RowMetric label="Rating" value={sku.rating.toFixed(1)} />
+      <RowMetric
+        label="Returns"
+        value={rate(sku.returnCount, sku.unitsSold)}
+        severity={returnsSeverity(sku.returnCount / sku.unitsSold)}
+      />
+      <RowMetric
+        label="Tickets"
+        value={String(sku.supportTickets)}
+        severity={ticketsSeverity(sku.supportTickets)}
+      />
+      <RowMetric
+        label="Rating"
+        value={sku.rating.toFixed(1)}
+        severity={ratingSeverity(sku.rating)}
+      />
       <RowMetric label="Exposure" value={`${sku.exposureScore}%`} />
 
       <div>
@@ -127,11 +159,14 @@ function SkuRow({ sku }: { sku: SellerSkuAnalytics }) {
           <span className="text-[11px] text-warm-gray">
             <TermTooltip term="risk">Risk</TermTooltip>
           </span>
-          <span className="text-[12px] font-medium text-charcoal">{sku.riskScore}</span>
+          <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium ${riskTextClass(risk)}`}>
+            <span className={`size-1.5 rounded-full ${riskDotClass(risk)}`} />
+            {sku.riskScore}
+          </span>
         </div>
         <div className="h-1.5 rounded-full bg-black/10 overflow-hidden">
           <div
-            className="h-full rounded-full bg-charcoal transition-all"
+            className={`h-full rounded-full transition-all ${riskBarClass(risk)}`}
             style={{ width: `${sku.riskScore}%` }}
           />
         </div>
@@ -140,13 +175,24 @@ function SkuRow({ sku }: { sku: SellerSkuAnalytics }) {
   );
 }
 
-function RowMetric({ label, value }: { label: string; value: string }) {
+function RowMetric({
+  label,
+  value,
+  severity = "neutral",
+}: {
+  label: string;
+  value: string;
+  severity?: MetricSeverity;
+}) {
   return (
     <div className="flex items-center justify-between md:block">
       <span className="text-[11px] text-warm-gray md:hidden">
         <TooltipLabel label={label} />
       </span>
-      <span className="text-[13px] font-medium text-charcoal">{value}</span>
+      <span className={`inline-flex items-center gap-1.5 text-[13px] font-medium ${severityTextClass(severity)}`}>
+        {severity !== "neutral" && <span className={`size-1.5 rounded-full ${severityDotClass(severity)}`} />}
+        {value}
+      </span>
     </div>
   );
 }
@@ -217,8 +263,18 @@ export function SellerDashboard() {
       <section className="grid grid-cols-2 gap-x-4 md:grid-cols-5 border-y border-black/10 mb-8">
         <Metric label="SKU count" value={String(analytics.skus.length)} subLabel="seller owned" />
         <Metric label="Sales" value={String(totalSales)} subLabel="last 6 months" />
-        <Metric label="Returns" value={rate(totalReturns, totalSales)} subLabel={`${totalReturns} units`} />
-        <Metric label="Tickets" value={String(totalTickets)} subLabel="buyer support" />
+        <Metric
+          label="Returns"
+          value={rate(totalReturns, totalSales)}
+          subLabel={`${totalReturns} units`}
+          severity={returnsSeverity(totalReturns / totalSales)}
+        />
+        <Metric
+          label="Tickets"
+          value={String(totalTickets)}
+          subLabel="buyer support"
+          severity={ticketsSeverity(totalTickets)}
+        />
         <Metric label="Exposure" value={`${averageExposure}%`} subLabel="portfolio avg" />
       </section>
 

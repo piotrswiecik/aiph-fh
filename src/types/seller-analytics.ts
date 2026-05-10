@@ -1,4 +1,4 @@
-export type SellerAnalyticsSort = "risk" | "returns" | "tickets" | "exposure";
+export type SellerAnalyticsSort = "risk" | "sales" | "returns" | "tickets" | "exposure";
 
 export type SellerAnalyticsStatus = "Needs attention" | "Watch" | "Stable" | "Super";
 
