@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Mail, Sparkles } from "lucide-react";
 import { useSellerSession } from "@/components/seller-analytics/seller-auth";
 import { SellerDashboardSkeleton } from "@/components/seller-analytics/seller-loading";
+import posthog from "posthog-js";
 
 const WAITLIST_KEY = "fashionhero_pro_plus_waitlist";
 
@@ -44,6 +45,10 @@ export function SellerProPlusPage() {
     };
 
     window.localStorage.setItem(WAITLIST_KEY, JSON.stringify(entry));
+    posthog.capture("seller_pro_plus_waitlist_joined", {
+      email: normalizedEmail,
+      seller_name: entry.sellerName,
+    });
     setSubmitted(true);
   }
 

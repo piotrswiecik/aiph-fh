@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createMockSellerSession } from "@/data/seller-analytics";
 import { saveSellerSession } from "@/components/seller-analytics/seller-auth";
+import posthog from "posthog-js";
 
 export function SellerLoginForm() {
   const router = useRouter();
@@ -21,7 +22,10 @@ export function SellerLoginForm() {
       return;
     }
 
-    saveSellerSession(createMockSellerSession(email));
+    const session = createMockSellerSession(email);
+    saveSellerSession(session);
+    posthog.identify(email, { email, seller_name: session.sellerName, role: "seller" });
+    posthog.capture("seller_signed_in", { email, seller_name: session.sellerName });
     router.push("/seller");
   }
 

@@ -17,6 +17,7 @@ import {
   TrendingDown,
 } from "lucide-react";
 import { getMockSellerAnalytics, sortSellerSkus } from "@/data/seller-analytics";
+import posthog from "posthog-js";
 import {
   clearSellerSession,
   useSellerSession,
@@ -220,6 +221,7 @@ function ProPlusBanner() {
         <Link
           href="/seller/pro-plus"
           className="btn-cta gap-2 self-start text-[11px] md:self-auto"
+          onClick={() => posthog.capture("seller_pro_plus_banner_clicked")}
         >
           JOIN WAITLIST
           <ArrowRight className="size-3.5" />
@@ -282,6 +284,8 @@ export function SellerDashboard() {
         <button
           type="button"
           onClick={() => {
+            posthog.capture("seller_signed_out");
+            posthog.reset();
             clearSellerSession();
             router.push("/seller/login");
           }}
@@ -352,7 +356,10 @@ export function SellerDashboard() {
               <button
                 key={option.value}
                 type="button"
-                onClick={() => setSort(option.value)}
+                onClick={() => {
+                  setSort(option.value);
+                  posthog.capture("seller_sku_sort_changed", { sort: option.value });
+                }}
                 className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-[11px] font-medium uppercase tracking-[0.7px] transition-colors ${
                   sort === option.value
                     ? "bg-charcoal text-white border-charcoal"

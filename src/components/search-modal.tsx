@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { CloseIcon, SearchIcon } from "./icons";
 import { products } from "@/data/products";
+import posthog from "posthog-js";
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -65,6 +66,14 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && query.trim()) {
+                  posthog.capture("search_performed", {
+                    query: query.trim(),
+                    result_count: results.length,
+                  });
+                }
+              }}
               placeholder="Search for shoes..."
               className="flex-1 text-base text-charcoal placeholder:text-warm-gray outline-none bg-transparent"
             />

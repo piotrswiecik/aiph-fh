@@ -15,6 +15,7 @@ import {
   TrendingDown,
 } from "lucide-react";
 import { getMockSellerAnalytics } from "@/data/seller-analytics";
+import posthog from "posthog-js";
 import {
   clearSellerSession,
   useSellerSession,
@@ -199,6 +200,19 @@ export function SellerSkuDetail({ skuId }: { skuId: string }) {
     return analytics?.skus.find((item) => item.sku === skuId);
   }, [analytics, skuId]);
 
+  useEffect(() => {
+    if (sku) {
+      posthog.capture("seller_sku_viewed", {
+        sku: sku.sku,
+        sku_name: sku.name,
+        status: sku.status,
+        risk_score: sku.riskScore,
+        category: sku.category,
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sku?.sku]);
+
   if (!loaded || !session || !analytics) {
     return <SellerDashboardSkeleton />;
   }
@@ -220,6 +234,8 @@ export function SellerSkuDetail({ skuId }: { skuId: string }) {
         <button
           type="button"
           onClick={() => {
+            posthog.capture("seller_signed_out");
+            posthog.reset();
             clearSellerSession();
             router.push("/seller/login");
           }}
