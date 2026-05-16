@@ -318,6 +318,14 @@ export function SellerDashboard() {
         <Link
           href={`/seller/skus/${highestRisk.sku}`}
           className="flex flex-col gap-4 border-b border-black/10 pb-6 mb-8 md:flex-row md:items-center md:justify-between"
+          onClick={() =>
+            posthog.capture("seller_top_risk_sku_clicked", {
+              sku: highestRisk.sku,
+              sku_name: highestRisk.name,
+              risk_score: highestRisk.riskScore,
+              status: highestRisk.status,
+            })
+          }
         >
           <div className="flex items-start gap-3">
             <span className="mt-0.5 rounded-full bg-red-50 p-2 text-red-700">

@@ -1,49 +1,47 @@
 <wizard-report>
 # PostHog post-wizard report
 
-The wizard has completed a deep integration of PostHog analytics into the FashionHero Shop project. The integration covers both the buyer-facing shop and the seller analytics POC, tracking the full user journeys for both personas.
+The wizard has completed a deep integration of FashionHero. PostHog was already substantially instrumented; the wizard verified and confirmed the existing setup, refreshed environment variable values, added three new capture calls covering missing funnel steps, and built an "Analytics basics" dashboard with five insights.
 
-## What was added
+## Infrastructure (verified correct)
 
-- **`instrumentation-client.ts`** — initializes `posthog-js` on the client side for all pages, with EU host routing through a reverse proxy, exception capture enabled, and debug mode in development.
-- **`src/lib/posthog-server.ts`** — singleton `posthog-node` client for server-side event capture.
-- **`next.config.ts`** — added `/ingest/*` rewrites that proxy PostHog requests through the Next.js server to `eu.i.posthog.com`, reducing ad-blocker interference.
-- **`.env.local`** — `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` set to the project's EU credentials.
-- **12 events** instrumented across 8 files, covering buyer login/register, cart, checkout, wishlist, search, and the full seller analytics flow (login, SKU browse, sort, Pro+ interest).
+| File | Purpose |
+|---|---|
+| `instrumentation-client.ts` | Client-side PostHog init via `posthog-js`, reverse proxy at `/ingest`, EU host, exception capture enabled |
+| `next.config.ts` | Rewrites for `/ingest/static/*`, `/ingest/array/*`, `/ingest/*` → EU PostHog endpoints |
+| `src/lib/posthog-server.ts` | Server-side `posthog-node` singleton (`getPostHogClient()`) |
+| `.env.local` | `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` written with correct values |
 
-## Events instrumented
+## Events
 
-| Event | Description | File |
+| Event name | Description | File |
 |---|---|---|
-| `user_signed_in` | Buyer signed in to their account | `src/app/account/login/page.tsx` |
-| `user_registered` | Buyer created a new account | `src/app/account/register/page.tsx` |
-| `product_added_to_cart` | Buyer added a product to the cart | `src/components/product-info.tsx` |
-| `product_wishlisted` | Buyer toggled wishlist on a product (added/removed) | `src/components/wishlist-button.tsx` |
-| `checkout_initiated` | Buyer clicked Place Order on the checkout page | `src/app/checkout/page.tsx` |
-| `search_performed` | Buyer submitted a search query (Enter key) | `src/components/search-modal.tsx` |
-| `seller_signed_in` | Seller submitted the mock login form | `src/components/seller-analytics/seller-login-form.tsx` |
-| `seller_signed_out` | Seller clicked Sign Out | `src/components/seller-analytics/seller-dashboard.tsx` |
-| `seller_sku_sort_changed` | Seller changed SKU signals sort order | `src/components/seller-analytics/seller-dashboard.tsx` |
-| `seller_sku_viewed` | Seller opened a SKU detail page | `src/components/seller-analytics/seller-sku-detail.tsx` |
-| `seller_pro_plus_banner_clicked` | Seller clicked the Pro+ Join Waitlist CTA | `src/components/seller-analytics/seller-dashboard.tsx` |
-| `seller_pro_plus_waitlist_joined` | Seller submitted the Pro+ waitlist form | `src/components/seller-analytics/seller-pro-plus-page.tsx` |
-
-## User identification
-
-- Buyer login and registration call `posthog.identify(email, { email, ... })` immediately after successful auth.
-- Seller login calls `posthog.identify(email, { email, seller_name, role: "seller" })`.
-- Sign-out buttons call `posthog.reset()` to disassociate the session from the identified user.
+| `user_signed_in` | Buyer signed in (with `posthog.identify`) | `src/app/account/login/page.tsx` |
+| `user_registered` | Buyer registered (with `posthog.identify`) | `src/app/account/register/page.tsx` |
+| `product_added_to_cart` | Product added to cart with SKU details | `src/components/product-info.tsx` |
+| `product_wishlisted` | Product wishlisted or un-wishlisted | `src/components/wishlist-button.tsx` |
+| `search_performed` | Search submitted with query and result count | `src/components/search-modal.tsx` |
+| `checkout_initiated` | Place Order button clicked on checkout page | `src/app/checkout/page.tsx` |
+| `seller_signed_in` | Seller signed in (with `posthog.identify`) | `src/components/seller-analytics/seller-login-form.tsx` |
+| `seller_signed_out` | Seller signed out (with `posthog.reset`) | `src/components/seller-analytics/seller-dashboard.tsx`, `seller-sku-detail.tsx` |
+| `seller_sku_sort_changed` | Seller changed SKU sort order | `src/components/seller-analytics/seller-dashboard.tsx` |
+| `seller_top_risk_sku_clicked` | **Added** — Seller clicked the top-risk SKU alert | `src/components/seller-analytics/seller-dashboard.tsx` |
+| `seller_sku_viewed` | Seller viewed a SKU detail page | `src/components/seller-analytics/seller-sku-detail.tsx` |
+| `seller_pro_plus_banner_clicked` | Seller clicked the Pro+ banner CTA | `src/components/seller-analytics/seller-dashboard.tsx` |
+| `seller_pro_plus_waitlist_joined` | Seller joined the Pro+ waitlist | `src/components/seller-analytics/seller-pro-plus-page.tsx` |
+| `cart_checkout_clicked` | **Added** — User clicked CHECKOUT in cart drawer | `src/components/cart-drawer.tsx` |
+| `product_quick_view_opened` | **Added** — User opened quick-view modal for a product | `src/components/product-card.tsx` |
 
 ## Next steps
 
 We've built some insights and a dashboard for you to keep an eye on user behavior, based on the events we just instrumented:
 
-- [Analytics basics dashboard](/dashboard/685297)
-- [Buyer purchase funnel](/insights/OSUaNVEP) — conversion from sign-in → add-to-cart → checkout
-- [Seller analytics funnel](/insights/0MNVmQIb) — seller sign-in → SKU viewed → Pro+ waitlist joined
-- [Cart & checkout activity](/insights/5Luxomg3) — daily trend of add-to-cart and checkout events
-- [Wishlist engagement](/insights/lF6zHFKQ) — daily trend of wishlist toggles
-- [Seller Pro+ interest](/insights/VztTjSDt) — Pro+ banner clicks vs waitlist joins
+- [Analytics basics dashboard](/dashboard/685462)
+- [Buyer checkout funnel](/insights/fdILJLLv) — add-to-cart → clicked checkout → placed order
+- [New user registrations & sign-ins](/insights/Uh7C62ol) — daily trend of buyer auth events
+- [Seller analytics flow funnel](/insights/iLIRFjSg) — seller sign-in → top-risk SKU click → SKU detail
+- [Product engagement signals](/insights/OQtaZy7w) — add-to-cart, wishlist, and quick-view trends
+- [Seller Pro+ waitlist conversion](/insights/Ljo1IYLg) — Pro+ banner click → waitlist joined
 
 ### Agent skill
 

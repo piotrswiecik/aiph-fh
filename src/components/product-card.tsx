@@ -7,6 +7,7 @@ import type { Product } from "@/types";
 import { WishlistButton } from "./wishlist-button";
 import { useQuickView } from "./quick-view-provider";
 import { getSellerById } from "@/data/sellers";
+import posthog from "posthog-js";
 
 interface ProductCardProps {
   product: Product;
@@ -90,6 +91,11 @@ export function ProductCard({ product, className }: ProductCardProps) {
                 e.preventDefault();
                 e.stopPropagation();
                 openQuickView(product);
+                posthog.capture("product_quick_view_opened", {
+                  product_id: product.id,
+                  product_name: product.name,
+                  category: product.category,
+                });
               }}
               className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/90 px-4 py-2 text-[10px] font-medium uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden md:block hover:bg-white z-10"
             >
